@@ -289,3 +289,85 @@
     )
   )
 )
+
+;; READ-ONLY QUERY FUNCTIONS
+
+;; Get Deposit Information
+;; Retrieves complete deposit details by transaction hash
+(define-read-only (get-deposit (tx-hash (buff 32)))
+  (map-get? deposits { tx-hash: tx-hash })
+)
+
+;; Get Bridge Operational Status
+;; Returns current bridge pause/active state
+(define-read-only (get-bridge-status)
+  (var-get bridge-paused)
+)
+
+;; Get Validator Authorization Status
+;; Checks if a principal has validator privileges
+(define-read-only (get-validator-status (validator principal))
+  (default-to false (map-get? validators validator))
+)
+
+;; Get User Bridge Balance
+;; Returns the bridged asset balance for a specific user
+(define-read-only (get-bridge-balance (user principal))
+  (default-to u0 (map-get? bridge-balances user))
+)
+
+;; VALIDATION HELPER FUNCTIONS
+
+;; Validate Principal Address
+;; Ensures principal is valid and not a system address
+(define-read-only (is-valid-principal (address principal))
+  (and
+    (not (is-eq address CONTRACT-DEPLOYER))
+    (not (is-eq address (as-contract tx-sender)))
+  )
+)
+
+;; Validate Bitcoin Address Format
+;; Checks Bitcoin address length and non-zero value
+(define-read-only (is-valid-btc-address (btc-addr (buff 33)))
+  (and
+    (is-eq (len btc-addr) u33)
+    (not (is-eq btc-addr
+      0x000000000000000000000000000000000000000000000000000000000000000000
+    ))
+    true
+  )
+)
+
+;; Validate Transaction Hash Format
+;; Ensures transaction hash meets Bitcoin standards
+(define-read-only (is-valid-tx-hash (tx-hash (buff 32)))
+  (and
+    (is-eq (len tx-hash) u32)
+    (not (is-eq tx-hash
+      0x0000000000000000000000000000000000000000000000000000000000000000
+    ))
+    true
+  )
+)
+
+;; Validate Cryptographic Signature
+;; Checks signature format and non-zero value
+(define-read-only (is-valid-signature (signature (buff 65)))
+  (and
+    (is-eq (len signature) u65)
+    (not (is-eq signature
+      0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    ))
+    true
+  )
+)
+
+;; Validate Deposit Amount Range
+;; Ensures deposit amount is within protocol limits
+(define-read-only (validate-deposit-amount (amount uint))
+  (and
+    (>= amount MIN-DEPOSIT-AMOUNT)
+    (<= amount MAX-DEPOSIT-AMOUNT)
+  )
+)
